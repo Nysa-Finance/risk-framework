@@ -1,0 +1,191 @@
+# Nysa Risk Engine — Asset Universe Configuration
+#
+# Source of truth for the assets covered by the risk parameter pipeline.
+# Each collateral is calibrated against every admissible borrowable
+# (per-pair methodology, see docs/nysa-market-risk-framework.md §3.3:
+# published LT per collateral = min over its pairs).
+#
+# `underlying_ticker` is the data-extraction proxy: GM tokens track the
+# NAV of their underlying, whose long price history (yfinance) is used to
+# estimate sigma_stress. On-chain GM token history, where available, is
+# used only to validate tracking (basis token/NAV).
+#
+# Fields left as `null` are business/deployment inputs to be filled
+# before calibration (addresses, chains, per-asset execution costs).
+
+meta:
+  version: 0.1
+  base_currency: USD
+  price_history_years: 10          # underlying daily history to extract
+  include_overnight_gaps: true     # close-to-open returns are risk-relevant (gap risk)
+
+collaterals:
+  # ---- RWA / Equity (Ondo GM tokens) — Collateral Only ----
+  - symbol: CRCLon
+    type: rwa
+    category: equity
+    underlying_ticker: CRCL
+    use: collateral_only
+    chain: null
+    address: null
+  - symbol: AAPLon
+    type: rwa
+    category: equity
+    underlying_ticker: AAPL
+    use: collateral_only
+    chain: null
+    address: null
+  - symbol: MUon
+    type: rwa
+    category: equity
+    underlying_ticker: MU
+    use: collateral_only
+    chain: null
+    address: null
+  - symbol: NVDAon
+    type: rwa
+    category: equity
+    underlying_ticker: NVDA
+    use: collateral_only
+    chain: null
+    address: null
+  - symbol: TSLAon
+    type: rwa
+    category: equity
+    underlying_ticker: TSLA
+    use: collateral_only
+    chain: null
+    address: null
+  - symbol: GOOGLon
+    type: rwa
+    category: equity
+    underlying_ticker: GOOGL
+    use: collateral_only
+    chain: null
+    address: null
+  - symbol: MSFTon
+    type: rwa
+    category: equity
+    underlying_ticker: MSFT
+    use: collateral_only
+    chain: null
+    address: null
+  - symbol: AMDon
+    type: rwa
+    category: equity
+    underlying_ticker: AMD
+    use: collateral_only
+    chain: null
+    address: null
+  - symbol: INTCon
+    type: rwa
+    category: equity
+    underlying_ticker: INTC
+    use: collateral_only
+    chain: null
+    address: null
+  - symbol: AMZNon
+    type: rwa
+    category: equity
+    underlying_ticker: AMZN
+    use: collateral_only
+    chain: null
+    address: null
+  - symbol: METAon
+    type: rwa
+    category: equity
+    underlying_ticker: META
+    use: collateral_only
+    chain: null
+    address: null
+
+  # ---- RWA / ETF (Ondo GM tokens) — Collateral Only ----
+  - symbol: SLVon
+    type: rwa
+    category: commodity_etf
+    underlying_ticker: SLV
+    use: collateral_only
+    chain: null
+    address: null
+  - symbol: QQQon
+    type: rwa
+    category: equity_etf
+    underlying_ticker: QQQ
+    use: collateral_only
+    chain: null
+    address: null
+  - symbol: SPYon
+    type: rwa
+    category: equity_etf
+    underlying_ticker: SPY
+    use: collateral_only
+    chain: null
+    address: null
+  - symbol: TLTon
+    type: rwa
+    category: bond_etf
+    underlying_ticker: TLT
+    use: collateral_only
+    chain: null
+    address: null
+
+borrowables:
+  # ---- Crypto — Lending & Borrowing (also usable as collateral) ----
+  - symbol: WBTC
+    type: crypto
+    category: wrapped
+    price_source: BTC-USD          # yfinance ticker proxy for long history
+    use: lending_and_borrowing
+    volatility_class: volatile     # borrow cap must also respect secondary depth (docs/nysa-lb-caps.md §3.1)
+  - symbol: WETH
+    type: crypto
+    category: wrapped
+    price_source: ETH-USD
+    use: lending_and_borrowing
+    volatility_class: volatile
+  - symbol: BNB
+    type: crypto
+    category: native
+    price_source: BNB-USD
+    use: lending_and_borrowing
+    volatility_class: volatile
+  - symbol: USDC
+    type: crypto
+    category: stable
+    price_source: USDC-USD
+    use: lending_and_borrowing
+    volatility_class: stable
+  - symbol: USDT
+    type: crypto
+    category: stable
+    price_source: USDT-USD
+    use: lending_and_borrowing
+    volatility_class: stable
+
+# Admissible collateral -> borrowable pairs.
+# Default: every RWA collateral can borrow every borrowable.
+# Crypto borrowables also act as collateral among themselves (Aave-style),
+# pairs listed explicitly to keep the calibration surface visible.
+pairs:
+  default_policy: all_collaterals_vs_all_borrowables
+  exclusions: []                   # add pairs to exclude, e.g. [SLVon, BNB]
+
+# Ondo session limits (supply cap inputs) — fetched per asset from the API,
+# not hardcoded here. See docs/nysa-lb-caps.md §2.1.
+ondo:
+  limits_api: "https://docs.ondo.finance/api-reference/limits/get-session-limits"
+  status_page: "https://status.ondo.finance/market"
+  api_key_env: ONDO_API_KEY        # set in environment, never committed
+
+# Calibration constants (single source of truth for the parameter modules;
+# mirrors RiskConfig — see docs/nysa-market-risk-framework.md)
+calibration:
+  ewma_lambda: 0.94                # §3.1 sigma_stress row
+  stress_quantile: 0.95            # percentile of EWMA vol series
+  es_factor: 3.5                   # fat-tailed ES multiplier @99% (Student-t ~4 dof)
+  t_liq_days: 0.3333               # pessimistic liquidation window (8h); revisit per gap-at-open
+  t_user_days: 3.0                 # borrower reaction horizon incl. weekends (§4.1)
+  k_user: 1.53                     # fat-tailed 90% quantile multiplier (§4.1)
+  stressed_liquidatable_share: 0.25  # supply cap scenario parameter (docs/nysa-lb-caps.md §2.1)
+  rf_theta: 0.01                   # reserve target as share of debt (§6.1)
+  rf_horizon_years: 0.83           # ~10 months accumulation (§6.1)

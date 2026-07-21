@@ -1,0 +1,33 @@
+# Data outputs (extracted prices, computed parameters, reports)
+data/*
+!data/.gitkeep
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtualenv (this project currently lives inside its own venv)
+bin/
+include/
+lib/
+lib64
+pyvenv.cfg
+.venv/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# IDE / OS
+.DS_Store
+.idea/
+.vscode/

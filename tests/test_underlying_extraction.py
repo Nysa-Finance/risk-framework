@@ -176,10 +176,14 @@ def test_run_iterates_over_universe_tickers(tmp_path: Path) -> None:
         pairs=PairsPolicy(default_policy="all_collaterals_vs_all_borrowables"),
         ondo=OndoConfig(limits_api="https://x", status_page="https://y", api_key_env="ONDO_API_KEY"),
         calibration=Calibration(
-            ewma_lambda=0.94, stress_quantile=0.95, es_factor=3.5,
+            ewma_lambda=0.94, stress_quantile=0.95, gap_sigma_quantile=0.90, es_factor=3.5,
             t_liq_days=0.33, t_user_days=3.0, k_user=1.53,
             stressed_liquidatable_share=0.25, rf_theta=0.01, rf_horizon_years=0.83,
-        ),
+            emode_min_advantage=0.05,
+            target_liq30_emode=(0.10, 0.15),
+            target_liq30_std=(0.10, 0.15),
+            minimum_gap=0.02,
+        max_uncond_bad_debt=0.004, min_calibration_years=3.0, severity_review_threshold=0.05, max_loss_given_bad_debt=0.065,        ),
     )
 
     seen: list[str] = []
@@ -217,10 +221,14 @@ def test_run_continues_when_one_ticker_fails(tmp_path: Path, caplog: pytest.LogC
         pairs=PairsPolicy(default_policy="all_collaterals_vs_all_borrowables"),
         ondo=OndoConfig(limits_api="https://x", status_page="https://y", api_key_env="ONDO_API_KEY"),
         calibration=Calibration(
-            ewma_lambda=0.94, stress_quantile=0.95, es_factor=3.5,
+            ewma_lambda=0.94, stress_quantile=0.95, gap_sigma_quantile=0.90, es_factor=3.5,
             t_liq_days=0.33, t_user_days=3.0, k_user=1.53,
             stressed_liquidatable_share=0.25, rf_theta=0.01, rf_horizon_years=0.83,
-        ),
+            emode_min_advantage=0.05,
+            target_liq30_emode=(0.10, 0.15),
+            target_liq30_std=(0.10, 0.15),
+            minimum_gap=0.02,
+        max_uncond_bad_debt=0.004, min_calibration_years=3.0, severity_review_threshold=0.05, max_loss_given_bad_debt=0.065,        ),
     )
 
     def _selective(ticker: str, start: date, end: date) -> pd.DataFrame:

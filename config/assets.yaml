@@ -28,6 +28,7 @@ collaterals:
     use: collateral_only
     chain: null
     address: null
+    execution_cost: 0.02             # placeholder S in LT = 1 − C_T − S (§3.3); replace per-collateral redemption cost
   - symbol: AAPLon
     type: rwa
     category: equity
@@ -35,6 +36,7 @@ collaterals:
     use: collateral_only
     chain: null
     address: null
+    execution_cost: 0.02             # placeholder S in LT = 1 − C_T − S (§3.3); replace per-collateral redemption cost
   - symbol: MUon
     type: rwa
     category: equity
@@ -42,6 +44,7 @@ collaterals:
     use: collateral_only
     chain: null
     address: null
+    execution_cost: 0.02             # placeholder S in LT = 1 − C_T − S (§3.3); replace per-collateral redemption cost
   - symbol: NVDAon
     type: rwa
     category: equity
@@ -49,6 +52,7 @@ collaterals:
     use: collateral_only
     chain: null
     address: null
+    execution_cost: 0.02             # placeholder S in LT = 1 − C_T − S (§3.3); replace per-collateral redemption cost
   - symbol: TSLAon
     type: rwa
     category: equity
@@ -56,6 +60,7 @@ collaterals:
     use: collateral_only
     chain: null
     address: null
+    execution_cost: 0.02             # placeholder S in LT = 1 − C_T − S (§3.3); replace per-collateral redemption cost
   - symbol: GOOGLon
     type: rwa
     category: equity
@@ -63,6 +68,7 @@ collaterals:
     use: collateral_only
     chain: null
     address: null
+    execution_cost: 0.02             # placeholder S in LT = 1 − C_T − S (§3.3); replace per-collateral redemption cost
   - symbol: MSFTon
     type: rwa
     category: equity
@@ -70,6 +76,7 @@ collaterals:
     use: collateral_only
     chain: null
     address: null
+    execution_cost: 0.02             # placeholder S in LT = 1 − C_T − S (§3.3); replace per-collateral redemption cost
   - symbol: AMDon
     type: rwa
     category: equity
@@ -77,6 +84,7 @@ collaterals:
     use: collateral_only
     chain: null
     address: null
+    execution_cost: 0.02             # placeholder S in LT = 1 − C_T − S (§3.3); replace per-collateral redemption cost
   - symbol: INTCon
     type: rwa
     category: equity
@@ -84,6 +92,7 @@ collaterals:
     use: collateral_only
     chain: null
     address: null
+    execution_cost: 0.02             # placeholder S in LT = 1 − C_T − S (§3.3); replace per-collateral redemption cost
   - symbol: AMZNon
     type: rwa
     category: equity
@@ -91,6 +100,7 @@ collaterals:
     use: collateral_only
     chain: null
     address: null
+    execution_cost: 0.02             # placeholder S in LT = 1 − C_T − S (§3.3); replace per-collateral redemption cost
   - symbol: METAon
     type: rwa
     category: equity
@@ -98,6 +108,7 @@ collaterals:
     use: collateral_only
     chain: null
     address: null
+    execution_cost: 0.02             # placeholder S in LT = 1 − C_T − S (§3.3); replace per-collateral redemption cost
 
   # ---- RWA / ETF (Ondo GM tokens) — Collateral Only ----
   - symbol: SLVon
@@ -107,6 +118,7 @@ collaterals:
     use: collateral_only
     chain: null
     address: null
+    execution_cost: 0.02             # placeholder S in LT = 1 − C_T − S (§3.3); replace per-collateral redemption cost
   - symbol: QQQon
     type: rwa
     category: equity_etf
@@ -114,6 +126,7 @@ collaterals:
     use: collateral_only
     chain: null
     address: null
+    execution_cost: 0.02             # placeholder S in LT = 1 − C_T − S (§3.3); replace per-collateral redemption cost
   - symbol: SPYon
     type: rwa
     category: equity_etf
@@ -121,6 +134,7 @@ collaterals:
     use: collateral_only
     chain: null
     address: null
+    execution_cost: 0.02             # placeholder S in LT = 1 − C_T − S (§3.3); replace per-collateral redemption cost
   - symbol: TLTon
     type: rwa
     category: bond_etf
@@ -128,9 +142,12 @@ collaterals:
     use: collateral_only
     chain: null
     address: null
+    execution_cost: 0.02             # placeholder S in LT = 1 − C_T − S (§3.3); replace per-collateral redemption cost
 
 borrowables:
   # ---- Crypto — Lending & Borrowing (also usable as collateral) ----
+  # Borrowables are lend/borrow-only; they never sit on the collateral
+  # side of a pair, so no execution_cost is needed here.
   - symbol: WBTC
     type: crypto
     category: wrapped
@@ -163,12 +180,27 @@ borrowables:
     volatility_class: stable
 
 # Admissible collateral -> borrowable pairs.
-# Default: every RWA collateral can borrow every borrowable.
-# Crypto borrowables also act as collateral among themselves (Aave-style),
-# pairs listed explicitly to keep the calibration surface visible.
+# Direction is strictly collateral -> borrowable. Assets flagged
+# `use: lending_and_borrowing` never appear on the collateral side.
+#
+# Exclusion entries support wildcards on either side:
+#   - {borrowable: BNB}         -> exclude every collateral against BNB
+#   - {collateral: SLVon}       -> exclude SLVon against every borrowable
+#   - {collateral: X, borrowable: Y}  -> exclude the specific pair
+# Legacy [X, Y] two-lists are still accepted (equivalent to the last form).
 pairs:
   default_policy: all_collaterals_vs_all_borrowables
-  exclusions: []                   # add pairs to exclude, e.g. [SLVon, BNB]
+  exclusions: []                   # every RWA collateral is admissible against every borrowable
+                                   # (E-Mode-restricted policies live under `emode_categories` below)
+
+# E-Mode categories — contractually-scoped borrowable sets.
+# A borrower opting into an E-Mode category can only borrow assets from
+# that category, and the collateral gets a category-specific LT computed
+# by taking the min-rule over the category's borrowables only. See
+# `nysa_risk.parameters.lt` docstring for the soundness argument.
+emode_categories:
+  stable:
+    borrowables: [USDC, USDT]
 
 # Ondo session limits (supply cap inputs) — fetched per asset from the API,
 # not hardcoded here. See docs/nysa-lb-caps.md §2.1.
@@ -181,7 +213,8 @@ ondo:
 # mirrors RiskConfig — see docs/nysa-market-risk-framework.md)
 calibration:
   ewma_lambda: 0.94                # §3.1 sigma_stress row
-  stress_quantile: 0.95            # percentile of EWMA vol series
+  stress_quantile: 0.95            # percentile of EWMA vol series (sigma_stress, C_T/LT only)
+  gap_sigma_quantile: 0.90         # percentile of EWMA vol series (sigma_gap, LTV gap buffer G only)
   es_factor: 3.5                   # fat-tailed ES multiplier @99% (Student-t ~4 dof)
   t_liq_days: 0.3333               # pessimistic liquidation window (8h); revisit per gap-at-open
   t_user_days: 3.0                 # borrower reaction horizon incl. weekends (§4.1)
@@ -189,3 +222,11 @@ calibration:
   stressed_liquidatable_share: 0.25  # supply cap scenario parameter (docs/nysa-lb-caps.md §2.1)
   rf_theta: 0.01                   # reserve target as share of debt (§6.1)
   rf_horizon_years: 0.83           # ~10 months accumulation (§6.1)
+  emode_min_advantage: 0.05        # min LT gain (fraction) required for an E-Mode row to be shown
+  target_liq30_emode: [0.10, 0.15] # acceptance band for P(liq ≤ 30d) at e-mode LTV (backtest_curves --calibrate)
+  target_liq30_std: [0.10, 0.15]   # acceptance band for P(liq ≤ 30d) at standard LTV
+  minimum_gap: 0.02                # calibrated LTV hard ceiling: LTV ≤ LT − minimum_gap
+  max_uncond_bad_debt: 0.004       # calibrate.py constraint (3): bad-debt events / non-censored openings
+  min_calibration_years: 3.0       # calibrate.py short-history guard: raises need ≥ this much pair history
+  severity_review_threshold: 0.05  # calibrate.py: max excess loss beyond 1 − LT that triggers an LT REVIEW flag
+  max_loss_given_bad_debt: 0.065   # calibrate.py LT pass: declared severity bound — worst per-position excess beyond 1 − LT
